@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insights — Map Coloring CSP Solver</title>
+<meta name="description" content="Analytics and insights for your CSP Map Coloring executions.">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🗺️</div>
+      <div><div class="brand-name">CSP Solver</div><div class="brand-sub">Map Coloring AI</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="/dashboard" class="nav-item"><span class="nav-icon">🏠</span><span>Dashboard</span></a>
+      <a href="/solver"    class="nav-item"><span class="nav-icon">🧩</span><span>Solver</span></a>
+      <a href="/history"   class="nav-item"><span class="nav-icon">🕒</span><span>History</span></a>
+      <a href="/insights"  class="nav-item active"><span class="nav-icon">📊</span><span>Insights</span></a>
+      <div class="nav-label">Account</div>
+      <a href="/logout"    class="nav-item"><span class="nav-icon">🚪</span><span>Logout</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.name[0]|upper }}</div>
+        <div class="user-info"><div class="user-name">{{ user.name }}</div><div class="user-role">CSP Analyst</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">📊 Insights &amp; Analytics</div>
+      <div class="topbar-right">
+        <span class="badge badge-purple">{{ total_executions }} runs</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+
+      <!-- Summary stats -->
+      <div class="stats-grid">
+        <div class="stat-card accent">
+          <div class="stat-icon">🗺️</div>
+          <div class="stat-label">Total Runs</div>
+          <div class="stat-value">{{ total_executions }}</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-label">Avg Confidence</div>
+          <div class="stat-value">{{ avg_confidence }}%</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">📉</div>
+          <div class="stat-label">Low Complexity</div>
+          <div class="stat-value" id="cnt-low">—</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">📈</div>
+          <div class="stat-label">High Complexity</div>
+          <div class="stat-value" id="cnt-high">—</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px;">
+
+        <!-- Confidence Over Time Chart -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">📈</span>Confidence Score Over Time</div>
+          </div>
+          <canvas id="confidenceChart" height="220"></canvas>
+        </div>
+
+        <!-- Complexity Donut -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">🥧</span>Complexity Distribution</div>
+          </div>
+          <canvas id="complexityChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Execution Table -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span>Execution Log</div>
+        </div>
+        {% if executions %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Regions</th><th>Colors</th>
+                <th>Status</th><th>Confidence</th><th>Complexity</th>
+                <th>Backtracks</th><th>Time (ms)</th><th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ex in executions[:20] %}
+              <tr>
+                <td><span class="badge badge-purple">#{{ ex.id }}</span></td>
+                <td style="font-size:12px;">{{ ex.regions|join(', ') }}</td>
+                <td style="font-size:12px;">{{ ex.colors|join(', ') }}</td>
+                <td><span class="badge {{ 'badge-success' if ex.success else 'badge-danger' }}">
+                  {{ '✓ Solved' if ex.success else '✗ Failed' }}
+                </span></td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="progress" style="width:60px;">
+                      <div class="progress-bar {{ 'success' if ex.confidence_score>=70 else 'warning' }}"
+                           style="width:{{ ex.confidence_score }}%;"></div>
+                    </div>
+                    <span style="font-size:11px;">{{ ex.confidence_score }}%</span>
+                  </div>
+                </td>
+                <td>
+                  {% set lbl = ex.complexity_label %}
+                  <span class="badge {{ 'badge-success' if 'LOW' in lbl else ('badge-warning' if 'MED' in lbl else 'badge-danger') }}">
+                    {{ lbl.split()[0] if lbl else '—' }}
+                  </span>
+                </td>
+                <td style="text-align:center;">{{ ex.backtracks }}</td>
+                <td style="text-align:center;">{{ ex.elapsed_ms }}</td>
+                <td style="font-size:11px;color:var(--text-muted);">{{ ex.timestamp.strftime('%d %b %Y') }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+          <div style="font-size:48px;margin-bottom:12px;">📊</div>
+          <p>No data yet. <a href="/solver">Run your first solve →</a></p>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+const CHART_DEFAULTS = {
+  color: '#f1f0ff',
+  font: { family: 'Inter, sans-serif', size: 12 }
+};
+Chart.defaults.color = CHART_DEFAULTS.color;
+Chart.defaults.font  = CHART_DEFAULTS.font;
+
+// ── Confidence Line Chart ──
+const dates  = {{ chart_dates|safe }};
+const scores = {{ chart_scores|safe }};
+
+if (dates.length) {
+  new Chart(document.getElementById('confidenceChart'), {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [{
+        label: 'Confidence Score (%)',
+        data: scores,
+        borderColor: '#6c63ff',
+        backgroundColor: 'rgba(108,99,255,0.12)',
+        pointBackgroundColor: '#a78bfa',
+        pointRadius: 5,
+        tension: 0.4,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 100, grid: { color: 'rgba(255,255,255,0.06)' }, ticks: { callback: v => v + '%' } },
+        x: { grid: { color: 'rgba(255,255,255,0.06)' } }
+      }
+    }
+  });
+}
+
+// ── Complexity Donut ──
+const complexityCounts = {{ complexity_counts|safe }};
+const total = complexityCounts.reduce((a,b)=>a+b,0);
+document.getElementById('cnt-low').textContent  = complexityCounts[0] || 0;
+document.getElementById('cnt-high').textContent = complexityCounts[2] || 0;
+
+if (total) {
+  new Chart(document.getElementById('complexityChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Low', 'Medium', 'High'],
+      datasets: [{
+        data: complexityCounts,
+        backgroundColor: ['#10b981','#f59e0b','#ef4444'],
+        borderWidth: 0,
+        hoverOffset: 8,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '65%',
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+</script>
+</body>
+</html>

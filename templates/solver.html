@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solver — Map Coloring CSP</title>
+<meta name="description" content="Interactive Map Coloring CSP Solver with explanation engine and constraint visualization.">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🗺️</div>
+      <div><div class="brand-name">CSP Solver</div><div class="brand-sub">Map Coloring AI</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="/dashboard" class="nav-item"><span class="nav-icon">🏠</span><span>Dashboard</span></a>
+      <a href="/solver"    class="nav-item active"><span class="nav-icon">🧩</span><span>Solver</span></a>
+      <a href="/history"   class="nav-item"><span class="nav-icon">🕒</span><span>History</span></a>
+      <a href="/insights"  class="nav-item"><span class="nav-icon">📊</span><span>Insights</span></a>
+      <div class="nav-label">Account</div>
+      <a href="/logout"    class="nav-item"><span class="nav-icon">🚪</span><span>Logout</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.name[0]|upper }}</div>
+        <div class="user-info"><div class="user-name">{{ user.name }}</div><div class="user-role">CSP Analyst</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">🧩 Map Coloring Solver</div>
+      <div class="topbar-right">
+        <span id="exec-id-badge" class="badge badge-purple">—</span>
+        <span id="solve-status" class="badge badge-warning">PENDING</span>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- ── LEFT: Input Panel ── -->
+        <div>
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">📝</span>Map Configuration</div>
+            </div>
+            <form id="solver-form">
+              <!-- Regions -->
+              <div class="form-group">
+                <label class="form-label">Regions</label>
+                <div class="tag-input-wrap" id="region-wrap">
+                  <input class="tag-real-input" id="region-input" placeholder="Type region name, press Enter…">
+                </div>
+                <input type="hidden" id="regions-hidden" name="regions">
+                <div class="form-hint">Press Enter or comma after each region name (e.g. A, B, C, D)</div>
+              </div>
+
+              <!-- Colors -->
+              <div class="form-group">
+                <label class="form-label">Available Colors</label>
+                <select id="color-select" class="form-control" multiple size="4">
+                  <option value="Red"    selected>🔴 Red</option>
+                  <option value="Green"  selected>🟢 Green</option>
+                  <option value="Blue"   selected>🔵 Blue</option>
+                  <option value="Yellow">🟡 Yellow</option>
+                  <option value="Purple">🟣 Purple</option>
+                  <option value="Orange">🟠 Orange</option>
+                  <option value="Cyan">🔷 Cyan</option>
+                </select>
+                <div class="form-hint">Hold Ctrl/Cmd to select multiple colors (default: 3 colors)</div>
+              </div>
+
+              <!-- Neighbors -->
+              <div class="form-group">
+                <label class="form-label">Adjacency Relationships</label>
+                <div id="neighbor-container" style="max-height:320px;overflow-y:auto;padding-right:4px;">
+                  <p style="color:var(--text-muted);font-size:13px;padding:12px;">Add regions above to configure adjacency.</p>
+                </div>
+              </div>
+
+              <button type="submit" id="solve-btn" class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;font-size:15px;">
+                🗺️ Solve Map Coloring
+              </button>
+            </form>
+          </div>
+
+          <!-- Color Legend -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">🎨</span>Color Legend</div>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <span class="badge badge-red">● Red</span>
+              <span class="badge badge-green">● Green</span>
+              <span class="badge badge-blue">● Blue</span>
+              <span class="badge badge-yellow">● Yellow</span>
+              <span class="badge badge-purple">● Purple</span>
+              <span class="badge badge-orange">● Orange</span>
+              <span class="badge badge-cyan">● Cyan</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── RIGHT: Results Panel ── -->
+        <div id="result-section" style="display:none;">
+
+          <!-- Confidence Meter -->
+          <div class="card" style="text-align:center;">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">🎯</span>Confidence Score</div>
+            </div>
+            <div id="complexity-banner" class="complexity-banner complexity-low">—</div>
+            <div class="confidence-ring">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+                <circle id="ring-fill" class="ring-fill" cx="60" cy="60" r="50" stroke="var(--accent)"></circle>
+              </svg>
+              <div class="ring-text">
+                <div id="ring-score" class="ring-value">0%</div>
+                <div class="ring-label">Confidence</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;text-align:left;">
+              <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius);">
+                <div style="font-size:11px;color:var(--text-muted);">Backtracks</div>
+                <div id="stat-backtracks" style="font-size:18px;font-weight:700;color:#fff;">—</div>
+              </div>
+              <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius);">
+                <div style="font-size:11px;color:var(--text-muted);">Exec Time</div>
+                <div id="stat-elapsed" style="font-size:18px;font-weight:700;color:#fff;">—</div>
+              </div>
+              <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius);">
+                <div style="font-size:11px;color:var(--text-muted);">Regions Colored</div>
+                <div id="stat-regions" style="font-size:18px;font-weight:700;color:#fff;">—</div>
+              </div>
+              <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--radius);">
+                <div style="font-size:11px;color:var(--text-muted);">Satisfaction</div>
+                <div id="stat-sat-pct" style="font-size:18px;font-weight:700;color:#fff;">—</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Satisfaction Progress -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">📊</span>Constraint Satisfaction</div>
+            </div>
+            <div style="margin-bottom:6px;display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);">
+              <span>Satisfied Constraints</span>
+              <span id="stat-sat-pct2">0%</span>
+            </div>
+            <div class="progress" style="height:12px;">
+              <div id="satisfaction-bar" class="progress-bar success" style="width:0%;"></div>
+            </div>
+            <div style="margin-top:16px;">
+              <div id="constraint-container"></div>
+            </div>
+          </div>
+
+          <!-- PDF Button -->
+          <div class="card" style="text-align:center;background:linear-gradient(135deg,rgba(108,99,255,.15),rgba(167,139,250,.08));border-color:rgba(108,99,255,.3);">
+            <div style="font-size:36px;margin-bottom:10px;">📄</div>
+            <div style="font-weight:700;font-size:15px;color:#fff;margin-bottom:6px;">Download PDF Report</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Get a full analysis report including solution, timeline and constraints.</div>
+            <button id="pdf-btn" class="btn btn-primary" style="width:100%;justify-content:center;">📥 Generate PDF Report</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Bottom: Solution + Timeline + Matrix ── -->
+      <div id="result-section-bottom" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+          <!-- Solution Cards -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">🗺️</span>Solution — Region Coloring</div>
+            </div>
+            <div id="solution-cards" class="region-grid"></div>
+          </div>
+
+          <!-- Adjacency Matrix -->
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title"><span class="icon">📐</span>Adjacency Matrix</div>
+            </div>
+            <div id="matrix-container"></div>
+          </div>
+        </div>
+
+        <!-- Execution Timeline -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⏱️</span>Execution Timeline — CSP Reasoning Steps</div>
+          </div>
+          <div id="timeline-container" class="timeline"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+  // Show bottom result section along with top
+  const origSubmit = document.getElementById('solver-form');
+  if (origSubmit) {
+    origSubmit.addEventListener('submit', () => {
+      setTimeout(() => {
+        const bottom = document.getElementById('result-section-bottom');
+        const top    = document.getElementById('result-section');
+        if (top && top.style.display !== 'none') {
+          if (bottom) bottom.style.display = 'block';
+        }
+      }, 800);
+    });
+  }
+</script>
+</body>
+</html>

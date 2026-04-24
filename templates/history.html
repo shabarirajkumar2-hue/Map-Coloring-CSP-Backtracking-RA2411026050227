@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>History — Map Coloring CSP Solver</title>
+<meta name="description" content="View full history of all Map Coloring CSP executions.">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🗺️</div>
+      <div><div class="brand-name">CSP Solver</div><div class="brand-sub">Map Coloring AI</div></div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="/dashboard" class="nav-item"><span class="nav-icon">🏠</span><span>Dashboard</span></a>
+      <a href="/solver"    class="nav-item"><span class="nav-icon">🧩</span><span>Solver</span></a>
+      <a href="/history"   class="nav-item active"><span class="nav-icon">🕒</span><span>History</span></a>
+      <a href="/insights"  class="nav-item"><span class="nav-icon">📊</span><span>Insights</span></a>
+      <div class="nav-label">Account</div>
+      <a href="/logout"    class="nav-item"><span class="nav-icon">🚪</span><span>Logout</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.name[0]|upper }}</div>
+        <div class="user-info"><div class="user-name">{{ user.name }}</div><div class="user-role">CSP Analyst</div></div>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">🕒 Execution History</div>
+      <div class="topbar-right">
+        <a href="/solver" class="btn btn-primary btn-sm">+ New Solve</a>
+      </div>
+    </header>
+
+    <main class="page-content">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">📋</span>All Map Coloring Runs</div>
+          <span class="badge badge-purple">{{ executions.total }} total</span>
+        </div>
+
+        {% if executions.items %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Regions</th>
+                <th>Solution</th>
+                <th>Colors</th>
+                <th>Status</th>
+                <th>Confidence</th>
+                <th>Complexity</th>
+                <th>Backtracks</th>
+                <th>Date</th>
+                <th>PDF</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ex in executions.items %}
+              <tr>
+                <td><span class="badge badge-purple">#{{ ex.id }}</span></td>
+                <td style="max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                  {{ ex.regions|join(', ') }}
+                </td>
+                <td style="max-width:180px;font-size:12px;color:var(--text-muted);">
+                  {% if ex.solution %}
+                    {% for r,c in ex.solution.items() %}
+                      <span class="badge badge-{{ c|lower }}" style="margin:1px;">{{ r }}→{{ c }}</span>
+                    {% endfor %}
+                  {% else %}—{% endif %}
+                </td>
+                <td style="font-size:12px;">{{ ex.colors|join(', ') }}</td>
+                <td>
+                  <span class="badge {{ 'badge-success' if ex.success else 'badge-danger' }}">
+                    {{ '✓ Solved' if ex.success else '✗ Failed' }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <div class="progress" style="width:60px;">
+                      <div class="progress-bar {{ 'success' if ex.confidence_score>=70 else 'warning' }}"
+                           style="width:{{ ex.confidence_score }}%;"></div>
+                    </div>
+                    <span style="font-size:11px;">{{ ex.confidence_score }}%</span>
+                  </div>
+                </td>
+                <td>
+                  {% set lbl = ex.complexity_label %}
+                  <span class="badge {{ 'badge-success' if 'LOW' in lbl else ('badge-warning' if 'MED' in lbl else 'badge-danger') }}">
+                    {{ lbl.split()[0] if lbl else '—' }}
+                  </span>
+                </td>
+                <td style="text-align:center;">{{ ex.backtracks }}</td>
+                <td style="font-size:12px;color:var(--text-muted);">
+                  {{ ex.timestamp.strftime('%d %b %Y %H:%M') }}
+                </td>
+                <td>
+                  <a href="/generate_report/{{ ex.id }}" class="btn btn-outline btn-sm" target="_blank">📄</a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if executions.pages > 1 %}
+        <div class="pagination">
+          {% if executions.has_prev %}
+            <a href="?page={{ executions.prev_num }}" class="page-btn">← Prev</a>
+          {% endif %}
+          {% for p in executions.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if p %}
+              <a href="?page={{ p }}" class="page-btn {{ 'active' if p == executions.page }}">{{ p }}</a>
+            {% else %}
+              <span class="page-btn" style="cursor:default;">…</span>
+            {% endif %}
+          {% endfor %}
+          {% if executions.has_next %}
+            <a href="?page={{ executions.next_num }}" class="page-btn">Next →</a>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div style="text-align:center;padding:60px;color:var(--text-muted);">
+          <div style="font-size:56px;margin-bottom:14px;">🗂️</div>
+          <p style="font-size:16px;margin-bottom:8px;">No history yet.</p>
+          <a href="/solver" class="btn btn-primary" style="margin-top:10px;">Start Solving →</a>
+        </div>
+        {% endif %}
+      </div>
+    </main>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

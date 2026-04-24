@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Map Coloring CSP Solver</title>
+<meta name="description" content="AI Lab CSP Solver Dashboard — overview of your map coloring executions.">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">🗺️</div>
+      <div>
+        <div class="brand-name">CSP Solver</div>
+        <div class="brand-sub">Map Coloring AI</div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <a href="/dashboard" class="nav-item active"><span class="nav-icon">🏠</span><span>Dashboard</span></a>
+      <a href="/solver"    class="nav-item"><span class="nav-icon">🧩</span><span>Solver</span></a>
+      <a href="/history"   class="nav-item"><span class="nav-icon">🕒</span><span>History</span></a>
+      <a href="/insights"  class="nav-item"><span class="nav-icon">📊</span><span>Insights</span></a>
+      <div class="nav-label">Account</div>
+      <a href="/logout"    class="nav-item"><span class="nav-icon">🚪</span><span>Logout</span></a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="user-chip">
+        <div class="user-avatar">{{ user.name[0]|upper }}</div>
+        <div class="user-info">
+          <div class="user-name">{{ user.name }}</div>
+          <div class="user-role">CSP Analyst</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <div class="topbar-title">🏠 Dashboard</div>
+      <div class="topbar-right">
+        <span class="badge badge-success">● Online</span>
+        <a href="/solver" class="btn btn-primary btn-sm">+ New Solve</a>
+      </div>
+    </header>
+
+    <main class="page-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for cat, msg in messages %}<div class="alert alert-{{ cat }}">{{ msg }}</div>{% endfor %}
+      {% endwith %}
+
+      <div class="stats-grid">
+        <div class="stat-card accent">
+          <div class="stat-icon">🗺️</div>
+          <div class="stat-label">Total Executions</div>
+          <div class="stat-value">{{ total }}</div>
+          <div class="stat-sub">All time runs</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">Maps Solved</div>
+          <div class="stat-value">{{ solved }}</div>
+          <div class="stat-sub">Successful colorings</div>
+        </div>
+        <div class="stat-card danger">
+          <div class="stat-icon">❌</div>
+          <div class="stat-label">Unsolvable</div>
+          <div class="stat-value">{{ failed }}</div>
+          <div class="stat-sub">No solution found</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-icon">🎯</div>
+          <div class="stat-label">Avg. Confidence</div>
+          <div class="stat-value">{{ avg_conf }}%</div>
+          <div class="stat-sub">Algorithm certainty</div>
+        </div>
+      </div>
+
+      <!-- Welcome Banner -->
+      <div class="card" style="background:linear-gradient(135deg,rgba(108,99,255,.18),rgba(167,139,250,.1));border-color:rgba(108,99,255,.3);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div>
+            <h2 style="font-size:20px;color:#fff;margin-bottom:6px;">Welcome back, {{ user.name }}! 👋</h2>
+            <p style="color:var(--text-muted);font-size:14px;">Use the CSP Solver to color maps using constraint satisfaction with full explanations.</p>
+          </div>
+          <a href="/solver" class="btn btn-primary">🧩 Start Solving</a>
+        </div>
+      </div>
+
+      <!-- Recent Executions -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🕒</span>Recent Executions</div>
+          <a href="/history" class="btn btn-outline btn-sm">View All</a>
+        </div>
+        {% if recent %}
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Regions</th>
+                <th>Colors</th>
+                <th>Status</th>
+                <th>Confidence</th>
+                <th>Complexity</th>
+                <th>Date</th>
+                <th>Report</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for ex in recent %}
+              <tr>
+                <td><span class="badge badge-purple">{{ ex.id }}</span></td>
+                <td>{{ ex.regions|join(', ') }}</td>
+                <td>{{ ex.colors|join(', ') }}</td>
+                <td>
+                  <span class="badge {{ 'badge-success' if ex.success else 'badge-danger' }}">
+                    {{ '✓ Solved' if ex.success else '✗ Failed' }}
+                  </span>
+                </td>
+                <td>
+                  <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="progress" style="width:80px;">
+                      <div class="progress-bar {{ 'success' if ex.confidence_score>=70 else 'warning' }}" style="width:{{ ex.confidence_score }}%;"></div>
+                    </div>
+                    <span style="font-size:12px;">{{ ex.confidence_score }}%</span>
+                  </div>
+                </td>
+                <td>
+                  {% set lbl = ex.complexity_label %}
+                  <span class="badge {{ 'badge-success' if 'LOW' in lbl else ('badge-warning' if 'MED' in lbl else 'badge-danger') }}">
+                    {{ lbl.replace(' COMPLEXITY MAP','') if lbl else '—' }}
+                  </span>
+                </td>
+                <td style="font-size:12px;color:var(--text-muted);">{{ ex.timestamp.strftime('%d %b %Y') }}</td>
+                <td><a href="/generate_report/{{ ex.id }}" class="btn btn-outline btn-sm" target="_blank">📄 PDF</a></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div style="text-align:center;padding:40px;color:var(--text-muted);">
+          <div style="font-size:48px;margin-bottom:12px;">🗺️</div>
+          <p>No executions yet. <a href="/solver">Start your first solve →</a></p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Algorithm Info -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span class="icon">🤖</span>Algorithm Overview</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
+          <div style="padding:16px;background:var(--bg-secondary);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:24px;margin-bottom:8px;">🔍</div>
+            <div style="font-weight:700;color:#fff;margin-bottom:4px;">Backtracking Search</div>
+            <div style="font-size:12px;color:var(--text-muted);">Core CSP algorithm that systematically explores assignments and backtracks on conflicts.</div>
+          </div>
+          <div style="padding:16px;background:var(--bg-secondary);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:24px;margin-bottom:8px;">📉</div>
+            <div style="font-weight:700;color:#fff;margin-bottom:4px;">MRV Heuristic</div>
+            <div style="font-size:12px;color:var(--text-muted);">Minimum Remaining Values — selects the region with fewest legal color options first.</div>
+          </div>
+          <div style="padding:16px;background:var(--bg-secondary);border-radius:var(--radius);border:1px solid var(--border);">
+            <div style="font-size:24px;margin-bottom:8px;">⚖️</div>
+            <div style="font-weight:700;color:#fff;margin-bottom:4px;">LCV Heuristic</div>
+            <div style="font-size:12px;color:var(--text-muted);">Least Constraining Value — tries the color that rules out the fewest options for neighbors.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
