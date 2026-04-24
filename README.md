@@ -3,6 +3,15 @@
 **AI Lab Assignment — Constraint Satisfaction Problem (CSP) with Backtracking Search**
 
 ---
+## Live Demo
+
+Access the deployed interactive Map Coloring CSP system here:
+
+https://map-coloring-csp-backtracking.onrender.com/login
+
+This live deployment demonstrates the Map Coloring Problem Solver using Constraint Satisfaction Problem (CSP) and Backtracking Search with rule validation, explanation engine, execution history tracking, and structured PDF report generation.
+
+The system allows users to register, login, solve map coloring problems using CSP constraints, view step-by-step reasoning, and generate explainable reports for academic evaluation and project presentation.
 
 ## 📌 Problem Description
 
